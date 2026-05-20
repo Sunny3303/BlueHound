@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# ─────────────────────────────────────────────────────────
+# Project metadata
+# ─────────────────────────────────────────────────────────
+[project]
+name = "bluehound"
+version = "1.0.0"
+description = "Active Directory Threat Modeling Engine — analyzes SharpHound data to detect attack paths to Tier-0 assets"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+keywords = ["active-directory", "cybersecurity", "threat-modeling", "bloodhound", "neo4j", "red-team", "blue-team"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: System :: Systems Administration",
+]
+
+dependencies = [
+    "neo4j>=5.14.0",
+    "click>=8.1.7",
+    "rich>=13.7.0",
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pyyaml>=6.0.1",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.25.0",        # FastAPI test client
+    "build>=1.0.0",
+    "twine>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/vShresthh/BlueHound"
+Issues   = "https://github.com/vShresthh/BlueHound/issues"
+
+# ─────────────────────────────────────────────────────────
+# CLI entry point — registers `bluehound` on PATH
+# ─────────────────────────────────────────────────────────
+[project.scripts]
+bluehound = "bluehound.cli.main:cli"
+
+# ─────────────────────────────────────────────────────────
+# Package discovery
+# ─────────────────────────────────────────────────────────
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["bluehound*"]
+exclude = ["tests*", "docs*"]
+
+# Include the pre-built React dashboard — these are non-Python files
+# that must be shipped with the package so `bluehound serve` works out of the box.
+[tool.setuptools.package-data]
+"bluehound.dashboard" = [
+    "dist/index.html",
+    "dist/assets/*",
+]
+
+# ─────────────────────────────────────────────────────────
+# Pytest
+# ─────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths    = ["tests"]
+python_files = ["test_*.py"]

@@ -1,0 +1,27 @@
+{
+  "certificate_templates": [
+    {
+      "name": "User",
+      "display_name": "User Certificate",
+      "application_policies": ["Client Authentication"],
+      "enrollment_permissions": [
+        {
+          "principal_sid": "S-1-5-21-513",
+          "rights": ["Enroll"]
+        }
+      ]
+    },
+    {
+      "name": "WebServer",
+      "application_policies": ["Server Authentication"]
+    }
+  ],
+  "certificate_authorities": [
+    {
+      "name": "CORP-CA01",
+      "dns_hostname": "ca01.corp.local",
+      "web_enrollment_enabled": true,
+      "templates": ["User", "WebServer"]
+    }
+  ]
+}

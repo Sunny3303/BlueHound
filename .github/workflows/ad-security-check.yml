@@ -1,0 +1,101 @@
+name: AD Security Gate
+
+# Scheduled Active Directory security assessment.
+#
+# This workflow requires a self-hosted runner that has:
+#   - Network access to a Neo4j instance containing BloodHound data
+#   - A Neo4j password stored in GitHub Actions secrets as NEO4J_PASSWORD
+#   - A variable NEO4J_URI set to the Bolt URI (default: bolt://localhost:7687)
+#   - A variable SHARPHOUND_ZIP_PATH pointing to a collected SharpHound ZIP
+#
+# The diff step exits with code 1 when a security regression is detected
+# (new Tier-0 paths, privilege creep, higher risk score). This causes the
+# job — and any dependent deployment jobs — to fail, acting as a hard gate.
+#
+# How to set this up:
+#   1. Configure a self-hosted runner on your assessment workstation.
+#      See: https://docs.github.com/en/actions/hosting-your-own-runners
+#   2. Add the secret:  Settings → Secrets → Actions → NEO4J_PASSWORD
+#   3. Add the variables: Settings → Variables → Actions
+#        NEO4J_URI        e.g.  bolt://localhost:7687
+#        SHARPHOUND_ZIP_PATH    e.g.  /opt/collections/latest.zip
+#   4. Commit a baseline snapshot under ./baseline/ or adjust the diff path.
+
+on:
+  # Run every Monday at 03:00 UTC so the weekly report is ready for
+  # Monday morning review.
+  schedule:
+    - cron: "0 3 * * 1"
+
+  # Allow a manual trigger from the GitHub Actions UI when an ad-hoc
+  # assessment is needed (e.g. after a significant AD change).
+  workflow_dispatch:
+
+jobs:
+  bluehound-assessment:
+    name: BlueHound AD Security Assessment
+    runs-on: self-hosted   # Must be a runner with Neo4j access
+
+    steps:
+      # ── 1. Check out the repository ────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Install BlueHound ───────────────────────────────────────────────
+      #     Installing from the checked-out source ensures the workflow always
+      #     uses the same version as the code in this repository.
+      - name: Install BlueHound
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      # ── 3. Ingest the latest SharpHound collection ─────────────────────────
+      #     --clear-graph wipes previous data so the graph reflects only the
+      #     current collection. The password comes from GitHub Secrets — it is
+      #     never echoed to the log.
+      - name: Ingest latest SharpHound collection
+        env:
+          BLUEHOUND_NEO4J_URI: ${{ vars.NEO4J_URI }}
+          BLUEHOUND_NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+        run: |
+          bluehound ingest "${{ vars.SHARPHOUND_ZIP_PATH }}" --clear-graph
+
+      # ── 4. Run the threat-model analysis ──────────────────────────────────
+      #     --no-dashboard suppresses the interactive server so the job can
+      #     complete without a manual Ctrl-C. Results are written to
+      #     .bluehound/results/<timestamp>.json automatically.
+      - name: Analyze snapshot
+        env:
+          BLUEHOUND_NEO4J_URI: ${{ vars.NEO4J_URI }}
+          BLUEHOUND_NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+        run: |
+          SNAP=$(ls -dt snapshots/* | head -1)
+          echo "Analyzing snapshot: $SNAP"
+          bluehound analyze "$SNAP" --no-dashboard
+
+      # ── 5. Compare with the committed baseline ─────────────────────────────
+      #     Exit code 1 = regression detected → job fails → blocks deployment.
+      #     Exit code 0 = no regression → job passes.
+      #
+      #     The baseline/ directory should contain a previously committed
+      #     result JSON that represents the known-good security posture.
+      #     Update it after intentional, reviewed AD changes.
+      - name: Diff against baseline
+        run: |
+          CURRENT=$(ls -t .bluehound/results/*.json | head -1)
+          echo "Comparing baseline → $CURRENT"
+          bluehound diff ./baseline/ "$CURRENT" \
+            --format json \
+            --output regression-report.json
+
+      # ── 6. Upload the diff report as a build artifact ──────────────────────
+      #     The report is uploaded regardless of whether the job passed or
+      #     failed (if: always()) so reviewers can inspect regressions even
+      #     when the gate blocks the pipeline.
+      - name: Upload regression report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bluehound-regression-report-${{ github.run_number }}
+          path: regression-report.json
+          retention-days: 90

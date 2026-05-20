@@ -1,0 +1,18 @@
+# Non-Python files to include in source distributions (pip install from sdist / GitHub)
+
+# Pre-built React dashboard — required for `bluehound serve`
+recursive-include bluehound/dashboard/dist *
+
+# Docs and licence
+include README.md
+include LICENSE
+
+# Exclude runtime / build artefacts that must never ship
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so
+recursive-exclude bluehound/dashboard/node_modules *
+recursive-exclude bluehound/dashboard/src *
+recursive-exclude .bluehound *
+recursive-exclude snapshots *
+global-exclude *.zip

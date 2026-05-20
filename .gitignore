@@ -1,0 +1,66 @@
+# ============================================================
+# BlueHound .gitignore
+# ============================================================
+ 
+# ── Operational runtime data (NEVER commit — contain real AD data) ──────────
+.bluehound/
+snapshots/
+ 
+# ── SharpHound ZIPs — contain raw AD telemetry ──────────────────────────────
+*.zip
+ 
+# ── Secrets & credentials ────────────────────────────────────────────────────
+.env
+*.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+# Note: ~/.bluehound/config.json lives outside the repo; gitignore cannot
+# affect home-directory paths. Keep passwords out of that file (use env vars).
+ 
+# ── Python build artifacts ───────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+/dist/          # Root-level Python wheel/sdist output only (NOT dashboard dist)
+/build/
+*.egg
+.eggs/
+.mypy_cache/
+.ruff_cache/
+pip-wheel-metadata/
+ 
+# ── Virtual environments ─────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+ 
+# ── Node / React (dashboard source tooling) ─────────────────────────────────
+bluehound/dashboard/node_modules/
+# NOTE: bluehound/dashboard/dist/ must be committed — it is declared as
+# package-data in pyproject.toml and shipped with the PyPI package.
+# Do NOT add bluehound/dashboard/dist/ here.
+ 
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+*.log.*
+ 
+# ── OS metadata ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+ 
+# ── IDE / editor files ───────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.suo
+*.user
+*.swp
+*.swo
+*~
